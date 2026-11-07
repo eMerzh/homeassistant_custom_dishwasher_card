@@ -81,6 +81,8 @@ Programme names come from Home Assistant itself: the card asks the frontend to f
 `select`/`sensor` state, so the Home Connect integration's own translations are used in the
 language configured in Home Assistant. Only when Home Assistant has no translation for an
 option does the card fall back to its built-in name list, and then to the prettified raw value.
+Labels refresh when the frontend language changes or translations finish loading, even
+while the appliance state stays unchanged.
 
 `language` forces the card's own labels (`de` or `en`) instead of following the Home Assistant
 frontend language. It does not affect programme names, which Home Assistant translates.

@@ -31,6 +31,12 @@ const PROGRAM_NAMES = {
     dishcare_dishwasher_program_pre_rinse: "Vorspülen",
     dishcare_dishwasher_program_quick_65: "Schnell 65 °C",
     dishcare_dishwasher_program_machine_care: "Maschinenpflege",
+    dishcare_dishwasher_program_night_wash: "Nachtprogramm",
+    dishcare_dishwasher_program_super_60: "Super 60 °C",
+    dishcare_dishwasher_program_glas_40: "Glas 40 °C",
+    dishcare_dishwasher_program_intensiv_power: "Intensiv Power",
+    dishcare_dishwasher_program_kurz_60: "Kurz 60 °C",
+    dishcare_dishwasher_program_mixed_load: "Gemischte Beladung",
   },
   en: {
     dishcare_dishwasher_program_intensiv_70: "Intensive 70 °C",
@@ -40,6 +46,12 @@ const PROGRAM_NAMES = {
     dishcare_dishwasher_program_pre_rinse: "Pre-rinse",
     dishcare_dishwasher_program_quick_65: "Quick 65 °C",
     dishcare_dishwasher_program_machine_care: "Machine care",
+    dishcare_dishwasher_program_night_wash: "Night wash",
+    dishcare_dishwasher_program_super_60: "Super 60 °C",
+    dishcare_dishwasher_program_glas_40: "Glass 40 °C",
+    dishcare_dishwasher_program_intensiv_power: "Intensive power",
+    dishcare_dishwasher_program_kurz_60: "Quick 60 °C",
+    dishcare_dishwasher_program_mixed_load: "Mixed load",
   },
 };
 
@@ -155,12 +167,17 @@ class DishwasherCard extends HTMLElement {
   }
 
   set hass(hass) {
+    const previousHass = this._hass;
     this._hass = hass;
     if (!this._entities && !this._discovering && this._config?.device_id) {
       void this._discover();
     }
     const signature = this._stateSignature();
-    if (signature !== this._signature) {
+    // Frontend translations can arrive or change without any appliance state changing.
+    const translationsChanged = previousHass?.localize !== hass?.localize
+      || previousHass?.language !== hass?.language
+      || previousHass?.locale?.language !== hass?.locale?.language;
+    if (signature !== this._signature || translationsChanged) {
       this._signature = signature;
       this._render();
     }

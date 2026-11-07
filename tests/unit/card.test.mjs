@@ -168,6 +168,97 @@ test("falls back to the raw value when no translation resolves it", () => {
   assert.equal(card._programLabel("Maschinenpflege"), "Maschinenpflege");
 });
 
+test("provides English and German fallbacks for common Home Connect programs", () => {
+  const programs = [
+    ["intensiv_70", "Intensive 70 °C", "Intensiv 70 °C"],
+    ["auto_2", "Auto", "Auto"],
+    ["eco_50", "Eco 50 °C", "Eco 50 °C"],
+    ["pre_rinse", "Pre-rinse", "Vorspülen"],
+    ["night_wash", "Night wash", "Nachtprogramm"],
+    ["quick_65", "Quick 65 °C", "Schnell 65 °C"],
+    ["machine_care", "Machine care", "Maschinenpflege"],
+    ["quick_45", "Quick 45 °C", "Schnell 45 °C"],
+    ["super_60", "Super 60 °C", "Super 60 °C"],
+    ["glas_40", "Glass 40 °C", "Glas 40 °C"],
+    ["intensiv_power", "Intensive power", "Intensiv Power"],
+    ["kurz_60", "Quick 60 °C", "Kurz 60 °C"],
+    ["mixed_load", "Mixed load", "Gemischte Beladung"],
+  ];
+  for (const [language, column] of [["en", 1], ["de", 2]]) {
+    const card = createCard({ language });
+    for (const program of programs) {
+      assert.equal(card._programLabel(`dishcare_dishwasher_program_${program[0]}`), program[column]);
+    }
+  }
+});
+
+test("refreshes rendered program labels when the frontend language changes", () => {
+  const program = "dishcare_dishwasher_program_quick_65";
+  const card = createCard({
+    entities: { selectedProgram: "select.dishwasher_selected" },
+    states: { "select.dishwasher_selected": entityState(program, { options: [program] }) },
+  });
+  card.hass = { ...card._hass, language: "de", formatEntityState: () => "Schnell 65 °C" };
+  assert.match(card.shadowRoot.innerHTML, /Schnell 65 °C/);
+
+  card.hass = {
+    ...card._hass,
+    language: "en",
+    locale: { language: "en" },
+    formatEntityState: () => "Quick 65 °C",
+  };
+  assert.match(card.shadowRoot.innerHTML, /Quick 65 °C/);
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /Schnell 65 °C/);
+  assert.match(card.shadowRoot.innerHTML, new RegExp(`value="${program}"`));
+});
+
+test("refreshes native labels between languages sharing the English card labels", () => {
+  const card = createCard({
+    language: "en",
+    entities: { selectedProgram: "select.dishwasher_selected" },
+    states: { "select.dishwasher_selected": entityState("dishcare_dishwasher_program_quick_65") },
+  });
+  card.hass = { ...card._hass, formatEntityState: () => "Quick 65 °C" };
+  card.hass = {
+    ...card._hass,
+    locale: { language: "fr" },
+    formatEntityState: () => "Rapide 65 °C",
+  };
+  assert.equal(card._language, "en");
+  assert.match(card.shadowRoot.innerHTML, /Rapide 65 °C/);
+});
+
+test("refreshes rendered program labels when translations finish loading", () => {
+  const program = "dishcare_dishwasher_program_future_cycle";
+  const card = createCard({
+    language: "en",
+    entities: { selectedProgram: "select.dishwasher_selected" },
+    states: { "select.dishwasher_selected": entityState(program, { options: [program] }) },
+  });
+  card.hass = {
+    ...card._hass,
+    localize: () => "",
+    formatEntityState(_state, value) { return this.localize(value) || value; },
+  };
+  assert.match(card.shadowRoot.innerHTML, /future cycle/);
+
+  card.hass = { ...card._hass, localize: () => "Future cycle" };
+  assert.match(card.shadowRoot.innerHTML, /Future cycle/);
+});
+
+test("does not redraw for unchanged language and translation resources", () => {
+  const card = createCard({
+    language: "en",
+    entities: { selectedProgram: "select.dishwasher_selected" },
+    states: { "select.dishwasher_selected": entityState("dishcare_dishwasher_program_eco_50") },
+  });
+  card.hass = card._hass;
+  let renders = 0;
+  card._render = () => { renders += 1; };
+  card.hass = { ...card._hass, locale: { language: "en" } };
+  assert.equal(renders, 0);
+});
+
 test("formats valid finish times and rejects invalid values", () => {
   const entities = { finish: "sensor.dishwasher_finish" };
   const card = createCard({
